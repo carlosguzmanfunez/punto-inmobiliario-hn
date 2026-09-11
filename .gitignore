@@ -1,0 +1,22 @@
+# dependencies
+node_modules
+
+# next.js
+.next
+out
+
+# environment (never version real secrets; .env.example is intentionally tracked)
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+npm-debug.log*
+
+# typescript incremental build info
+*.tsbuildinfo
+
+# os
+.DS_Store
+Thumbs.db
