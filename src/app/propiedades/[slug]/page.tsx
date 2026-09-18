@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { properties } from "@/lib/mock-data";
+import { getPropertyBySlug } from "@/db/queries/properties";
 
 const money = new Intl.NumberFormat("es-HN", { maximumFractionDigits: 0 });
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const property = properties.find((item) => item.slug === slug);
+  const property = await getPropertyBySlug(slug);
   if (!property) notFound();
 
   return (

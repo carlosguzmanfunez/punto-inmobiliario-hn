@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PropertyCard } from "@/components/PropertyCard";
-import { properties } from "@/lib/mock-data";
+import { getProperties, type PropertyOperation } from "@/db/queries/properties";
 import { departments } from "@/lib/honduras";
 
 export default async function PropertiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -12,14 +12,15 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
   const city = typeof params.ciudad === "string" ? params.ciudad : "";
   const max = typeof params.precioMax === "string" ? Number(params.precioMax) : undefined;
 
-  const filtered = properties.filter((property) => {
-    if (department && property.department !== department) return false;
-    if (city && property.city !== city) return false;
-    if (operation === "venta" && property.operation !== "SALE") return false;
-    if (operation === "alquiler" && property.operation !== "RENT") return false;
-    if (type && property.type !== type) return false;
-    if (max && property.price > max) return false;
-    return true;
+  const operationFilter: PropertyOperation | undefined =
+    operation === "venta" ? "SALE" : operation === "alquiler" ? "RENT" : undefined;
+
+  const filtered = await getProperties({
+    department: department || undefined,
+    city: city || undefined,
+    operation: operationFilter,
+    type: type || undefined,
+    maxPrice: max,
   });
 
   return (
