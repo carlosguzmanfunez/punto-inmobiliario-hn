@@ -38,6 +38,25 @@ async function esperarArranque(intentos = 60) {
   throw new Error(`la aplicación no respondió en ${BASE} tras ${intentos}s`);
 }
 
+/**
+ * Pide una ruta y devuelve su HTML, exigiendo que la respuesta sea correcta.
+ *
+ * Sin esta comprobación, un fallo transitorio del servidor (un 500 por una latencia de base, por
+ * ejemplo) se veía como «el filtro no devuelve la propiedad»: el mensaje culpaba a la funcionalidad y
+ * ocultaba el código real, y la prueba fallaba de forma intermitente sin causa visible. Ahora el
+ * código HTTP viaja en el mensaje del fallo.
+ */
+async function htmlDe(ruta) {
+  const respuesta = await fetch(`${BASE}${ruta}`);
+  const html = await respuesta.text();
+  assert.equal(
+    respuesta.status,
+    200,
+    `la ruta ${ruta} debía responder 200 y respondió ${respuesta.status}`,
+  );
+  return html;
+}
+
 before(async () => {
   servidor = spawn(`npx next start -p ${PORT}`, { stdio: "ignore", shell: true });
   await esperarArranque();
@@ -79,8 +98,8 @@ test("un slug inexistente conserva el 404", async () => {
 });
 
 test("el filtro por operación sigue funcionando", async () => {
-  const alquiler = await (await fetch(`${BASE}/propiedades?operacion=alquiler`)).text();
-  const venta = await (await fetch(`${BASE}/propiedades?operacion=venta`)).text();
+  const alquiler = await htmlDe("/propiedades?operacion=alquiler");
+  const venta = await htmlDe("/propiedades?operacion=venta");
 
   assert.ok(alquiler.includes("HN-000247"), "el alquiler devuelve el local comercial");
   assert.ok(!alquiler.includes("HN-000184"), "el alquiler no devuelve la casa en venta");
@@ -89,9 +108,7 @@ test("el filtro por operación sigue funcionando", async () => {
 });
 
 test("el filtro por departamento sigue funcionando", async () => {
-  const html = await (
-    await fetch(`${BASE}/propiedades?departamento=${encodeURIComponent("Cortés")}`)
-  ).text();
+  const html = await htmlDe(`/propiedades?departamento=${encodeURIComponent("Cortés")}`);
 
   assert.ok(html.includes("HN-000211"));
   assert.ok(html.includes("HN-000247"));
@@ -99,8 +116,8 @@ test("el filtro por departamento sigue funcionando", async () => {
 });
 
 test("el filtro por tipo y precio máximo sigue funcionando", async () => {
-  const porTipo = await (await fetch(`${BASE}/propiedades?tipo=Terreno`)).text();
-  const porPrecio = await (await fetch(`${BASE}/propiedades?precioMax=2000000`)).text();
+  const porTipo = await htmlDe("/propiedades?tipo=Terreno");
+  const porPrecio = await htmlDe("/propiedades?precioMax=2000000");
 
   assert.ok(porTipo.includes("HN-000239"));
   assert.ok(!porTipo.includes("HN-000184"));
