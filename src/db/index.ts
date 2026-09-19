@@ -1,6 +1,11 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeonHttp, type NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { drizzle as drizzlePostgresJs, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { PgDatabase } from "drizzle-orm/pg-core";
+import {
+  drizzle as drizzlePostgresJs,
+  type PostgresJsDatabase,
+  type PostgresJsQueryResultHKT,
+} from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import * as schema from "./schema";
@@ -45,3 +50,22 @@ export const db: Database =
   transport === "neon-http"
     ? drizzleNeonHttp(neon(connectionString), { schema })
     : drizzlePostgresJs(postgres(connectionString), { schema });
+
+/**
+ * Tipo base común de los dos transportes, para la ruta de **escritura**.
+ *
+ * `NeonHttpDatabase` y `PostgresJsDatabase` extienden el mismo `PgDatabase` y comparten el constructor
+ * de consultas, pero cada uno lo instancia con su propio «query result HKT». Sobre la unión de los dos,
+ * TypeScript no resuelve la llamada encadenada de escritura (`insert(...).values(...)`), aunque sí la
+ * de lectura. Estrechar la unión a este tipo base —una sola vez, aquí, y solo para el tipo— deja la
+ * ruta de escritura compilando sin repartir aserciones por las consultas.
+ *
+ * Es una decisión **de tipos, no de ejecución**: `dbWriter` es la misma instancia que `db`, el runtime
+ * no cambia y los métodos usados (`insert`, `values`, `returning`) proceden del constructor compartido.
+ * El tipo exportado `Database` sigue siendo la unión exacta de los dos drivers, que es lo que de verdad
+ * hay detrás de `db`.
+ */
+export type DatabaseWriter = PgDatabase<PostgresJsQueryResultHKT, typeof schema>;
+
+/** Vista de escritura de la misma base de datos, con el tipo base de los dos transportes. */
+export const dbWriter: DatabaseWriter = db as DatabaseWriter;
