@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/vertical-slice.test.mjs",
+    "test": "node --test tests/db-transport.test.mjs tests/vertical-slice.test.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
@@ -15,6 +15,7 @@
     "@neondatabase/serverless": "latest",
     "drizzle-orm": "latest",
     "next": "16.3.3",
+    "postgres": "^3.4.9",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "zod": "latest"
