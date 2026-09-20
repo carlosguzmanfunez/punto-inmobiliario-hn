@@ -1,4 +1,5 @@
 import { departments } from "@/lib/honduras";
+import { propertyTypes } from "@/lib/property-types";
 
 export function HeroSearch() {
   return (
@@ -26,7 +27,7 @@ export function HeroSearch() {
               <span>Tipo de propiedad</span>
               <select name="tipo" defaultValue="">
                 <option value="">Todos los tipos</option>
-                <option>Casa</option><option>Apartamento</option><option>Terreno</option><option>Local comercial</option><option>Oficina</option><option>Bodega</option><option>Finca</option>
+                {propertyTypes.map(({ type }) => <option key={type} value={type}>{type}</option>)}
               </select>
             </label>
             <label>
