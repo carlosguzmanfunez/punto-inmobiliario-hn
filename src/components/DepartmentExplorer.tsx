@@ -1,4 +1,4 @@
-import { departments } from "@/lib/honduras";
+import { departments, departmentMapPaths, departmentViewBox } from "@/lib/honduras";
 
 export function DepartmentExplorer() {
   return (
@@ -7,10 +7,29 @@ export function DepartmentExplorer() {
         <div><p className="eyebrow dark">Cobertura nacional</p><h2>Explora los 18 departamentos de Honduras</h2></div>
       </div>
       <div className="department-layout">
-        <div className="map-placeholder" aria-label="Mapa conceptual de Honduras">
-          <div className="map-shape">HN</div>
-          <p>Mapa interactivo por departamento</p>
-          <small>En Fase 2 se conectará a un proveedor cartográfico.</small>
+        <div className="results-map" aria-label="Mapa de departamentos de Honduras">
+          <svg viewBox={departmentViewBox} role="img" aria-label="Mapa de departamentos de Honduras" className="honduras-map" style={{ width: "100%", height: "auto" }}>
+            {departments.map((departmentName) => (
+              <a
+                key={departmentName}
+                href={`/propiedades?departamento=${encodeURIComponent(departmentName)}`}
+                title={`Ver propiedades en ${departmentName}`}
+                aria-label={`Ver propiedades en ${departmentName}`}
+                style={{ cursor: "pointer" }}
+              >
+                <title>{departmentName}</title>
+                <path
+                  d={departmentMapPaths[departmentName]}
+                  fill="#f4efe6"
+                  stroke="#8a7b6a"
+                  strokeWidth="1.5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </a>
+            ))}
+          </svg>
+          <strong>Mapa interactivo</strong>
+          <p>Selecciona un departamento para ver sus propiedades.</p>
         </div>
         <div className="department-grid">
           {departments.map((department) => (
