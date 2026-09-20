@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { PropertyCard } from "@/components/PropertyCard";
 import { getProperties, type PropertyOperation } from "@/db/queries/properties";
 import { departments } from "@/lib/honduras";
+import { propertyTypes } from "@/lib/property-types";
 
 export default async function PropertiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
@@ -29,7 +30,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
       <form className="filter-bar">
         <select name="operacion" defaultValue={operation}><option value="">Comprar o alquilar</option><option value="venta">Comprar</option><option value="alquiler">Alquilar</option></select>
         <select name="departamento" defaultValue={department}><option value="">Toda Honduras</option>{departments.map((d) => <option key={d}>{d}</option>)}</select>
-        <select name="tipo" defaultValue={type}><option value="">Todos los tipos</option><option>Casa</option><option>Apartamento</option><option>Terreno</option><option>Local comercial</option></select>
+        <select name="tipo" defaultValue={type}><option value="">Todos los tipos</option>{propertyTypes.map(({ label, type: propertyType }) => <option key={propertyType} value={propertyType}>{label}</option>)}</select>
         <input name="precioMax" type="number" defaultValue={max || ""} placeholder="Precio máximo" />
         <button className="button button-primary">Aplicar filtros</button>
       </form>

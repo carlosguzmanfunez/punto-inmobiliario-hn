@@ -12,10 +12,14 @@
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { after, before, test } from "node:test";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 const PORT = Number(process.env.PILOT_TEST_PORT ?? 3210);
 const BASE = `http://127.0.0.1:${PORT}`;
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Códigos del inventario que el seed carga en la base de desarrollo. */
 const CODIGOS = ["HN-000184", "HN-000211", "HN-000239", "HN-000247"];
@@ -57,6 +61,16 @@ async function htmlDe(ruta) {
   return html;
 }
 
+/** Devuelve los tipos de propiedad definidos en el catálogo real (seed.sql). */
+function tiposDeSeed() {
+  const sql = readFileSync(path.join(root, "src/db/seed.sql"), "utf8");
+  const match = sql.match(/INSERT INTO "property_types"[\s\S]*?ON CONFLICT DO NOTHING;/);
+  assert.ok(match, "falta el bloque property_types en seed.sql");
+  const rows = [...match[0].matchAll(/\(\s*\d+\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*\)/g)];
+  assert.ok(rows.length > 0, "seed.sql debe declarar al menos un tipo");
+  return rows.map((row) => row[1]);
+}
+
 before(async () => {
   servidor = spawn(`npx next start -p ${PORT}`, { stdio: "ignore", shell: true });
   await esperarArranque();
@@ -78,6 +92,14 @@ test("el listado público se sirve desde PostgreSQL", async () => {
   }
   assert.ok(html.includes("resultado(s)"), "el listado declara el recuento de resultados");
   assert.ok(!html.includes("No encontramos coincidencias"), "el listado no está vacío");
+});
+
+test("las opciones del filtro de tipo del listado coinciden con el catálogo de seed.sql", async () => {
+  const html = await htmlDe("/propiedades");
+  const tipos = tiposDeSeed();
+  for (const tipo of tipos) {
+    assert.ok(html.includes(`<option value="${tipo}">`), `el filtro debe ofrecer el tipo ${tipo} del catálogo`);
+  }
 });
 
 test("la ficha individual se sirve desde PostgreSQL", async () => {

@@ -37,3 +37,23 @@ test("la constante canónica no introduce tipos fuera del catálogo", () => {
   const seedTypes = parsePropertyTypesFromSeed(read("src/db/seed.sql"));
   for (const type of uiTypes) assert.ok(seedTypes.includes(type), `"${type}" no está en el catálogo`);
 });
+
+test("todos los consumidores públicos del tipo de propiedad importan la fuente canónica", () => {
+  const consumidores = [
+    "src/components/CategoryGrid.tsx",
+    "src/components/HeroSearch.tsx",
+    "src/app/propiedades/page.tsx",
+  ];
+  for (const file of consumidores) {
+    const source = read(file);
+    assert.ok(source.includes('from "@/lib/property-types"'), `${file} debe importar propertyTypes`);
+  }
+});
+
+test("el filtro de /propiedades no vuelve a declarar opciones fijas de tipo", () => {
+  const source = read("src/app/propiedades/page.tsx");
+  const hardcodedTypes = ["Casa", "Apartamento", "Terreno", "Local comercial"];
+  for (const type of hardcodedTypes) {
+    assert.ok(!source.includes(`<option>${type}</option>`), `el filtro no debe fijar ${type} en el JSX`);
+  }
+});
