@@ -50,6 +50,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                 <path
                   d={departmentMapPaths[departmentName]}
                   fill="#f4efe6"
+                  fillRule="evenodd"
                   stroke="#8a7b6a"
                   strokeWidth="1.5"
                   vectorEffect="non-scaling-stroke"
