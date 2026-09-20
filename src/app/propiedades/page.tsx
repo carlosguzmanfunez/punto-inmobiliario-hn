@@ -2,7 +2,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PropertyCard } from "@/components/PropertyCard";
 import { getProperties, type PropertyOperation } from "@/db/queries/properties";
-import { departments } from "@/lib/honduras";
+import { departments, departmentMapPaths, departmentViewBox } from "@/lib/honduras";
 import { propertyTypes } from "@/lib/property-types";
 
 export default async function PropertiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -36,7 +36,30 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
       </form>
       <div className="results-layout">
         <div className="results-grid">{filtered.length ? filtered.map((p) => <PropertyCard key={p.id} property={p} />) : <div className="empty-state"><h2>No encontramos coincidencias.</h2><p>Prueba eliminando alguno de los filtros.</p></div>}</div>
-        <aside className="results-map"><div className="map-shape small">HN</div><strong>Mapa interactivo</strong><p>Preparado para integrar Mapbox, Google Maps u otro proveedor en la Fase 2.</p></aside>
+        <aside className="results-map">
+          <svg viewBox={departmentViewBox} role="img" aria-label="Mapa de departamentos de Honduras" className="honduras-map" style={{ width: "100%", height: "auto" }}>
+            {departments.map((departmentName) => (
+              <a
+                key={departmentName}
+                href={`/propiedades?departamento=${encodeURIComponent(departmentName)}`}
+                title={`Ver propiedades en ${departmentName}`}
+                aria-label={`Ver propiedades en ${departmentName}`}
+                style={{ cursor: "pointer" }}
+              >
+                <title>{departmentName}</title>
+                <path
+                  d={departmentMapPaths[departmentName]}
+                  fill="#f4efe6"
+                  stroke="#8a7b6a"
+                  strokeWidth="1.5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </a>
+            ))}
+          </svg>
+          <strong>Mapa interactivo</strong>
+          <p>Selecciona un departamento para ver sus propiedades.</p>
+        </aside>
       </div>
     </main><Footer /></>
   );
