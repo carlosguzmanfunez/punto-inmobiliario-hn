@@ -109,3 +109,29 @@ test("honduras.ts no conserva los trazados aproximados y usa el GeoJSON autorita
     assert.ok(!hondurasSource.includes(token), `honduras.ts no debe conservar el trazo aproximado ${token}`);
   }
 });
+
+test("el componente reutilizable conserva la geometría y los enlaces por departamento", () => {
+  const source = read("src/components/InteractiveHondurasMap.tsx");
+  assert.ok(source.includes("\"use client\""), "el mapa interactivo debe ser un componente cliente para manejar hover");
+  assert.ok(source.includes("from \"@/lib/honduras\""), "debe importar las fuentes canónicas del mapa");
+  assert.ok(source.includes("departmentMapPaths[departmentName]"), "debe reutilizar los trazados canónicos");
+  assert.ok(source.includes("encodeURIComponent(departmentName)"), "debe conservar el enlace por departamento");
+  assert.ok(source.includes("onMouseEnter"), "debe escuchar la entrada del cursor");
+  assert.ok(source.includes("onMouseLeave"), "debe escuchar la salida del cursor");
+  assert.ok(source.includes("setActiveDepartment(null)"), "debe limpiar el departamento activo al salir");
+});
+
+test("las páginas consumen el componente reutilizable y no duplican el SVG del mapa", () => {
+  const page = read("src/app/propiedades/page.tsx");
+  const explorer = read("src/components/DepartmentExplorer.tsx");
+  assert.ok(page.includes("<InteractiveHondurasMap />"), "la página /propiedades debe usar el componente de mapa");
+  assert.ok(explorer.includes("<InteractiveHondurasMap />"), "el explorador de departamentos debe usar el componente de mapa");
+  assert.ok(!page.includes("<svg"), "la página de resultados no debe volver a declarar el SVG del mapa");
+  assert.ok(!explorer.includes("<svg"), "el explorador no debe volver a declarar el SVG del mapa");
+});
+
+test("el CSS resalta visualmente el departamento enfocado por hover", () => {
+  const css = read("src/app/globals.css");
+  assert.ok(css.includes(".department-path:hover"), "el CSS debe resaltar el trazo al pasar el cursor");
+  assert.ok(css.includes(".department-path.is-active"), "el CSS debe mantener el resaltado del departamento activo");
+});
