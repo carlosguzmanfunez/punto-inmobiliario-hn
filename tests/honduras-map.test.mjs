@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -111,14 +111,92 @@ test("honduras.ts no conserva los trazados aproximados y usa el GeoJSON autorita
 });
 
 test("el componente reutilizable conserva la geometría y los enlaces por departamento", () => {
-  const source = read("src/components/InteractiveHondurasMap.tsx");
-  assert.ok(source.includes("\"use client\""), "el mapa interactivo debe ser un componente cliente para manejar hover");
-  assert.ok(source.includes("from \"@/lib/honduras\""), "debe importar las fuentes canónicas del mapa");
-  assert.ok(source.includes("departmentMapPaths[departmentName]"), "debe reutilizar los trazados canónicos");
-  assert.ok(source.includes("encodeURIComponent(departmentName)"), "debe conservar el enlace por departamento");
-  assert.ok(source.includes("onMouseEnter"), "debe escuchar la entrada del cursor");
-  assert.ok(source.includes("onMouseLeave"), "debe escuchar la salida del cursor");
-  assert.ok(source.includes("setActiveDepartment(null)"), "debe limpiar el departamento activo al salir");
+  // Server Component: única lectura de las fuentes canónicas del mapa (`node:fs` es server-only).
+  const server = read("src/components/InteractiveHondurasMap.tsx");
+  assert.ok(!/^\s*["']use client["']/m.test(server), "el contenedor debe ser un Server Component");
+  assert.ok(server.includes("from \"@/lib/honduras\""), "debe importar las fuentes canónicas del mapa");
+  assert.ok(server.includes("departmentMapPaths"), "debe reutilizar los trazados canónicos");
+  assert.ok(server.includes("<HondurasMapView"), "debe delegar el hover a la vista cliente");
+
+  // Vista cliente: hover/foco, enlaces y trazados recibidos por props.
+  const view = read("src/components/HondurasMapView.tsx");
+  assert.ok(view.includes("\"use client\""), "el mapa interactivo debe ser un componente cliente para manejar hover");
+  assert.ok(view.includes("paths[departmentName]"), "debe reutilizar los trazados canónicos recibidos");
+  assert.ok(view.includes("encodeURIComponent(departmentName)"), "debe conservar el enlace por departamento");
+  assert.ok(view.includes("onMouseEnter"), "debe escuchar la entrada del cursor");
+  assert.ok(view.includes("onMouseLeave"), "debe escuchar la salida del cursor");
+  assert.ok(view.includes("setActiveDepartment(null)"), "debe limpiar el departamento activo al salir");
+});
+
+// Frontera server/client: `src/lib/honduras.ts` lee el GeoJSON con `node:fs` (server-only). Un
+// Client Component que lo importe (aunque sea transitivamente) mete `node:fs` en el bundle del
+// cliente y Turbopack responde 500 ("does not support external modules (request: node:fs)").
+function runtimeImports(source) {
+  const imports = [];
+  for (const match of source.matchAll(/^\s*import\s+(?!type\b)[^;]*?from\s+["']([^"']+)["']/gm)) imports.push(match[1]);
+  for (const match of source.matchAll(/^\s*import\s+["']([^"']+)["']/gm)) imports.push(match[1]);
+  return imports;
+}
+
+function resolveModule(specifier) {
+  const base = specifier.startsWith("@/") ? `src/${specifier.slice(2)}` : null;
+  if (!base) return null;
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+    try {
+      readFileSync(path.join(root, candidate), "utf8");
+      return candidate;
+    } catch {
+      /* siguiente candidato */
+    }
+  }
+  return null;
+}
+
+function walkSources(directory) {
+  const found = [];
+  for (const entry of readdirSync(path.join(root, directory), { withFileTypes: true })) {
+    const relative = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) found.push(...walkSources(relative));
+    else if (/\.(ts|tsx)$/.test(entry.name)) found.push(relative);
+  }
+  return found;
+}
+
+function clientGraphViolations(entry) {
+  const seen = new Set();
+  const violations = [];
+  const visit = (file, via) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    const source = read(file);
+    for (const specifier of runtimeImports(source)) {
+      if (specifier.startsWith("node:") || ["fs", "path", "child_process"].includes(specifier)) {
+        violations.push(`${[...via, file].join(" -> ")} -> ${specifier}`);
+        continue;
+      }
+      const resolved = resolveModule(specifier);
+      if (resolved) visit(resolved, [...via, file]);
+    }
+  };
+  visit(entry, []);
+  return violations;
+}
+
+test("ningún Client Component arrastra node:fs (u otro módulo de Node) a su grafo de imports", () => {
+  const clientEntries = walkSources("src").filter((file) => /^\s*["']use client["']/.test(read(file)));
+  assert.ok(clientEntries.includes("src/components/HondurasMapView.tsx"), "el mapa cliente debe estar entre los Client Components");
+  for (const entry of clientEntries) {
+    assert.deepEqual(clientGraphViolations(entry), [], `${entry} importa código server-only en el cliente`);
+  }
+});
+
+test("el detector de frontera detecta la cadena que rompió /propiedades", () => {
+  // Reproduce la causa: un cliente que importa valores de honduras.ts (que usa node:fs).
+  const source = 'import { departments } from "@/lib/honduras";';
+  assert.deepEqual(runtimeImports(source), ["@/lib/honduras"]);
+  assert.equal(resolveModule("@/lib/honduras"), "src/lib/honduras.ts");
+  assert.ok(read("src/lib/honduras.ts").includes("node:fs"), "honduras.ts sigue siendo el módulo server-only con node:fs");
+  assert.deepEqual(runtimeImports('import type { DepartmentName } from "@/lib/honduras";'), [], "un import de solo tipos se borra al compilar");
 });
 
 test("las páginas consumen el componente reutilizable y no duplican el SVG del mapa", () => {
@@ -134,4 +212,21 @@ test("el CSS resalta visualmente el departamento enfocado por hover", () => {
   const css = read("src/app/globals.css");
   assert.ok(css.includes(".department-path:hover"), "el CSS debe resaltar el trazo al pasar el cursor");
   assert.ok(css.includes(".department-path.is-active"), "el CSS debe mantener el resaltado del departamento activo");
+});
+
+test("el CSS refuerza el contraste visual del departamento resaltado con un grosor de trazo mayor", () => {
+  const css = read("src/app/globals.css");
+  assert.ok(
+    /\.department-path:hover[\s\S]{0,40}\.department-path\.is-active\s*\{[^}]*stroke-width/.test(css),
+    "el hover/active debe reforzar el grosor del trazo para un destaque más visible",
+  );
+});
+
+test("la etiqueta del departamento activo muestra el nombre canónico sin transformarlo", () => {
+  const source = read("src/components/HondurasMapView.tsx");
+  assert.ok(source.includes("{activeDepartment}"), "debe interpolar el nombre canónico directamente en la etiqueta");
+  assert.ok(
+    !/activeDepartment\s*\.\s*(toUpperCase|toLowerCase)/.test(source),
+    "no debe transformar el nombre canónico del departamento",
+  );
 });
