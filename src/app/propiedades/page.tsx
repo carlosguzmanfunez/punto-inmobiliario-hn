@@ -4,13 +4,14 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { InteractiveHondurasMap } from "@/components/InteractiveHondurasMap";
 import { getProperties, type PropertyOperation } from "@/db/queries/properties";
 import { departments } from "@/lib/honduras";
-import { propertyTypes } from "@/lib/property-types";
+import { isPropertyTypeName, propertyTypes } from "@/lib/property-types";
 
 export default async function PropertiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   const department = typeof params.departamento === "string" ? params.departamento : "";
   const operation = typeof params.operacion === "string" ? params.operacion : "";
-  const type = typeof params.tipo === "string" ? params.tipo : "";
+  const rawType = typeof params.tipo === "string" ? params.tipo : "";
+  const type = isPropertyTypeName(rawType) ? rawType : "";
   const city = typeof params.ciudad === "string" ? params.ciudad : "";
   const max = typeof params.precioMax === "string" ? Number(params.precioMax) : undefined;
 

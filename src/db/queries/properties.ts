@@ -9,6 +9,7 @@ import {
   propertyTypes,
 } from "@/db/schema";
 import type { Property } from "@/lib/types";
+import type { PropertyTypeName } from "@/lib/property-types";
 
 /** Operación soportada por el modelo de datos. */
 export type PropertyOperation = "SALE" | "RENT";
@@ -18,7 +19,7 @@ export type PropertyFilters = {
   department?: string;
   city?: string;
   operation?: PropertyOperation;
-  type?: string;
+  type?: PropertyTypeName;
   maxPrice?: number;
 };
 

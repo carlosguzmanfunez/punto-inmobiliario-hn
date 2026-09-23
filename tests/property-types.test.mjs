@@ -57,3 +57,13 @@ test("el filtro de /propiedades no vuelve a declarar opciones fijas de tipo", ()
     assert.ok(!source.includes(`<option>${type}</option>`), `el filtro no debe fijar ${type} en el JSX`);
   }
 });
+
+test("la entrada externa se valida con el catálogo antes de llegar a la consulta", () => {
+  const canonical = read("src/lib/property-types.ts");
+  const page = read("src/app/propiedades/page.tsx");
+  const query = read("src/db/queries/properties.ts");
+
+  assert.match(canonical, /function isPropertyTypeName\(value: string\): value is PropertyTypeName/);
+  assert.match(page, /isPropertyTypeName\(rawType\)/);
+  assert.match(query, /type\?: PropertyTypeName/);
+});
