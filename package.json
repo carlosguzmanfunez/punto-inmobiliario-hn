@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --test-concurrency=1 tests/db-transport.test.mjs tests/lead-capture.test.mjs tests/vertical-slice.test.mjs tests/property-types.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/db-transport.test.mjs tests/lead-capture.test.mjs tests/vertical-slice.test.mjs tests/property-types.test.mjs tests/home-structure.test.mjs tests/admin_dashboard.test.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
